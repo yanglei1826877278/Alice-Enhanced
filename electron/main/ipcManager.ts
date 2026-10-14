@@ -12,6 +12,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import axios from 'axios'
 import { registerCloudVoiceHandlers } from './cloudVoice'
+import { registerWindowDragHandlers } from './windowDrag'
 import { loadSettings, saveSettings, AppSettings } from './settingsManager'
 import {
   getWebSocketServer,
@@ -231,6 +232,7 @@ export function registerIPCHandlers(): void {
   }
   ipcHandlersRegistered = true
   registerCloudVoiceHandlers()
+  registerWindowDragHandlers(getMainWindow)
 
   // Window management
   ipcMain.on('resize', (event, arg) => {

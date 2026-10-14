@@ -197,7 +197,8 @@
   letter-spacing: 0.12em;
   cursor: grab;
   user-select: none;
-  -webkit-app-region: drag !important;
+  touch-action: none;
+  -webkit-app-region: no-drag !important;
 }
 
 .sidebar-drag-handle:active {

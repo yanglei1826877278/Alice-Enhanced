@@ -153,7 +153,7 @@ export class PermissionManager {
         throw new Error('Command denied by permission rule.')
       if (rule?.effect === 'allow' && !highRisk) continue
       if (this.mode === 'read-only') continue
-      if (this.mode === 'full-access' && !highRisk) continue
+      if (this.mode === 'full-access') continue
       if (this.mode === 'workspace' && cwd && isReadOnlyCommand(segment))
         continue
       await this.promptForCommand(

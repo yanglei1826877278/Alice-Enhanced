@@ -117,6 +117,8 @@ export const INVOKE_CHANNELS = new Set([
 ])
 
 export const SEND_CHANNELS = new Set([
+  'window:drag-start',
+  'window:drag-end',
   'resize',
   'mini',
   'close-app',

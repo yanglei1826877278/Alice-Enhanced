@@ -37,27 +37,7 @@
         <span>支持 PNG、JPG、WebP 和 PDF</span>
       </div>
     </div>
-    <div
-      v-if="sideBarView === 'chat'"
-      class="sidebar-drag-handle window-drag-area"
-      title="Drag to move Alice"
-      aria-label="Drag to move Alice"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        aria-hidden="true"
-      >
-        <circle cx="7" cy="7" r="1.25" />
-        <circle cx="12" cy="7" r="1.25" />
-        <circle cx="17" cy="7" r="1.25" />
-        <circle cx="7" cy="12" r="1.25" />
-        <circle cx="12" cy="12" r="1.25" />
-        <circle cx="17" cy="12" r="1.25" />
-      </svg>
-      <span>拖动窗口</span>
-    </div>
+    <WindowDragHandle v-if="sideBarView === 'chat'" />
     <header v-if="sideBarView === 'chat'" class="hud-panel-header">
       <div class="hud-identity">
         <strong>AI ASSISTANT</strong>
@@ -411,6 +391,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import Chat from './Chat.vue'
+import WindowDragHandle from './WindowDragHandle.vue'
 import ConversationDialog from './ConversationDialog.vue'
 import MemoryManagerComponent from './MemoryManager.vue'
 import { useGeneralStore } from '../stores/generalStore'
