@@ -1,0 +1,45 @@
+.avatar-wrapper {
+  height: 500px;
+}
+.avatar-wrapper.mini {
+  height: 200px;
+}
+.avatar-ring {
+  @apply rounded-full ring-2 ring-blue-500 bg-gray-700 ring-offset-base-100 ring-offset-2
+  relative overflow-hidden !flex justify-center items-center
+  z-20 bg-no-repeat bg-cover bg-center shadow-md;
+}
+.avatar > .alice-avatar-viewport {
+  border-radius: 50% !important;
+  overflow: hidden;
+  isolation: isolate;
+}
+.alice-avatar-video-clip {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  clip-path: circle(50% at 50% 50%);
+  pointer-events: none;
+}
+.alice-avatar-drag-surface {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: 50%;
+  clip-path: circle(50% at 50% 50%);
+  cursor: grab;
+  -webkit-app-region: drag;
+}
+.alice-avatar-drag-surface:active {
+  cursor: grabbing;
+}
+.avatar {
+  transition: all 0.1s ease-in-out;
+}
+.avatar.open {
+  @apply pr-[505px];
+}
+.avatar:hover .inside-actions {
+  opacity: 1;
+}

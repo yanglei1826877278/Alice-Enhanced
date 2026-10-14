@@ -1,0 +1,157 @@
+name: PR Build Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '**.spec.js'
+      - '.idea'
+      - '.vscode'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - '.gitignore'
+      - '.github/**'
+      - '!.github/workflows/pr-build.yml'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request Number'
+        required: true
+
+jobs:
+  build:
+    name: Build Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-2022]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      - name: Checkout PR Branch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          gh pr checkout ${{ github.event.inputs.pr_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Set up Python (for native modules)
+        uses: actions/setup-python@v5
+        id: setup_python
+        with:
+          python-version: '3.11'
+
+      - name: Install Python build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          # Ensure distutils is available for node-gyp
+          python -c "import distutils; print('distutils available')"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/go.sum
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Verify Go installation
+        run: |
+          which go
+          go version
+
+      - name: Install Go Dependencies
+        working-directory: backend
+        run: go mod download
+
+      - name: Install Node Dependencies
+        run: npm ci
+        env:
+          PYTHON: ${{ steps.setup_python.outputs.python-path }}
+          npm_config_python: ${{ steps.setup_python.outputs.python-path }}
+
+      - name: Run Unit Tests
+        run: npm run test
+
+      - name: Run Type Checks
+        run: npm run typecheck
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+        env:
+          DEBUG: 'electron-rebuild'
+          PYTHON: ${{ steps.setup_python.outputs.python-path }}
+          npm_config_python: ${{ steps.setup_python.outputs.python-path }}
+
+      - name: Create dummy app-config.json
+        shell: bash
+        run: |
+          echo "{
+            \"VITE_GOOGLE_CLIENT_ID\": \"DUMMY_PR_BUILD_CLIENT_ID\",
+            \"VITE_GOOGLE_CLIENT_SECRET\": \"DUMMY_PR_BUILD_CLIENT_SECRET\"
+          }" > app-config.json
+          echo "Dummy app-config.json created for PR build."
+
+      - name: Create resources directory
+        run: mkdir -p resources/backend
+        shell: bash
+
+      - name: Install Windows CGO toolchain
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Add Windows GCC to PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: echo "C:\msys64\ucrt64\bin" >> $env:GITHUB_PATH
+
+      - name: Build Go Backend
+        working-directory: backend
+        env:
+          CGO_ENABLED: 1
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-2022" ]]; then
+            go build -ldflags="-s -w" -o ../resources/backend/alice-backend.exe
+          else
+            go build -ldflags="-s -w" -o ../resources/backend/alice-backend
+          fi
+        shell: bash
+
+      - name: Build Frontend
+        run: npm run build:web
+
+      - name: Build Electron App
+        run: npm run build:electron -- --publish never
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr_build_on_${{ matrix.os }}
+          path: release/
+          retention-days: 3

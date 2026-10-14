@@ -1,0 +1,46 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
+import { useSettingsStore } from '../stores/settingsStore'
+import MainComponent from '../components/Main.vue'
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'Main',
+    component: MainComponent,
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/',
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(
+    import.meta.env.BASE_URL === '/vite-gh-pages/'
+      ? '/'
+      : import.meta.env.BASE_URL || '/'
+  ),
+  routes,
+})
+
+router.beforeEach(async to => {
+  const settingsStore = useSettingsStore()
+
+  if (!settingsStore.initialLoadAttempted) {
+    await settingsStore.loadSettings()
+  }
+
+  if (
+    to.name === 'Main' &&
+    settingsStore.isProduction &&
+    !settingsStore.areEssentialSettingsProvided
+  ) {
+    console.log(
+      'Router: Essential settings missing in production. Will open settings window.'
+    )
+  }
+  return true
+})
+
+export default router

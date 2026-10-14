@@ -1,0 +1,730 @@
+[
+  {
+    "type": "function",
+    "name": "get_current_datetime",
+    "description": "Call this function whenever discussing current events, recent developments, time-sensitive information, or when converting relative times (e.g., 'tomorrow at 2 PM') for scheduling. This function returns the current date and time.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["full", "date_only", "time_only", "year_only"],
+          "description": "The format of the datetime information to return. 'full', 'date_only', 'time_only' or 'year_only' are your options. Default is 'full' if not specified."
+        }
+      },
+      "additionalProperties": false,
+      "required": ["format"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "open_path",
+    "description": "Opens a specified file, folder, or application on the user's computer using the default operating system handler, or opens a URL in the default web browser. Use for launching apps, documents, folders, or websites mentioned by the user. Ask user for their username in system, if needed. If user mention that they are on non Windows OS adjust commands accordingly.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The target to open. Can be an absolute file path (e.g., '/Users/(username)/file.txt'), a folder path (e.g., 'C:\\Users\\(username)\\Documents'), or a full URL (e.g., 'https://www.google.com'). User is using Windows 11, when you need to open an application define a path to it in this OS. Use this tool to open web search result url for user command."
+        }
+      },
+      "required": ["target"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "manage_clipboard",
+    "description": "Manages the system clipboard. Can read the current text content from the clipboard or write new text content to it. Useful for transferring text between Alice and other applications.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["read", "write"],
+          "description": "Specifies the operation to perform: 'read' to get text from the clipboard, 'write' to put text onto the clipboard."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content to write to the clipboard. Required only when the action is 'write'. Ignored for 'read'."
+        }
+      },
+      "required": ["action"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "save_memory",
+    "description": "Store a long-term memory about the User. The memory should be a short, clear description that you can recall later to better understand and assist him. For example: 'User, enjoys hiking in the mountains.' Categorize the memory by type (e.g., 'personal', 'work', 'hobby').",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "The memory content to store. It should be a brief but meaningful description of the fact or event."
+        },
+        "memoryType": {
+          "type": "string",
+          "description": "The type of memory, like 'personal', 'work', 'hobby'. Default is 'general'."
+        }
+      },
+      "required": ["content", "memoryType"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "delete_memory",
+    "description": "Forget a long-term memory about User by permanently deleting it from storage. Use this if the memory is no longer valid or User asks you to forget it.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique ID of the memory to delete. This ID identifies exactly which memory should be removed."
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "recall_memories",
+    "description": "Retrieve long-term memories stored about the User. Use the query parameter to find memories relevant to a specific topic or context. If query is omitted, recent memories are returned.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The topic, question, or context to find relevant memories for. Omit to get recent general memories."
+        },
+        "memoryType": {
+          "type": "string",
+          "description": "Filter memories by type (e.g., 'personal', 'work'). Can be combined with a query."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "list_directory",
+    "description": "Lists the files and folders in a specified directory on the user's computer. Use this to explore the file system.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The absolute path of the directory to list."
+        }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "execute_command",
+    "description": "Executes a shell command under the user's permission policy. Supply cwd whenever the command belongs to a project so project-scoped approvals and workspace protections can be applied.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "The shell command to execute."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Optional absolute working directory. Providing it enables project-scoped permission rules."
+        }
+      },
+      "required": ["command"],
+      "additionalProperties": false
+    }
+  },
+
+  {
+    "type": "function",
+    "name": "schedule_task",
+    "description": "Schedules either a recurring task with schedule, or a one-time reminder with trigger_at. Provide exactly one. One-time scheduling supports reminders only and trigger_at must include Z or an explicit timezone offset.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A descriptive name for the scheduled task (e.g., 'Morning calendar check', 'Hourly stretch reminder')."
+        },
+        "schedule": {
+          "type": "string",
+          "description": "Recurring schedule pattern, natural language or cron. Omit when using trigger_at."
+        },
+        "trigger_at": {
+          "type": "string",
+          "description": "One-time reminder time in ISO 8601 with Z or an explicit offset, for example 2026-10-14T09:00:00+08:00. Omit for recurring tasks."
+        },
+        "action_type": {
+          "type": "string",
+          "enum": ["command", "reminder"],
+          "description": "Type of action: 'command' to execute a shell command, 'reminder' for Alice to speak a message."
+        },
+        "details": {
+          "type": "string",
+          "description": "For 'command': the shell command to execute. For 'reminder': the message for Alice to speak."
+        }
+      },
+      "required": ["name", "action_type", "details"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "manage_scheduled_tasks",
+    "description": "View, delete, or toggle scheduled tasks. Use this to list all scheduled tasks, remove unwanted ones, or activate/deactivate tasks.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["list", "delete", "toggle"],
+          "description": "Action to perform: 'list' to show all tasks, 'delete' to remove a task, 'toggle' to activate/deactivate a task."
+        },
+        "task_id": {
+          "type": "string",
+          "description": "The ID of the task to delete or toggle. Required for 'delete' and 'toggle' actions."
+        }
+      },
+      "required": ["action"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "get_unread_emails",
+    "description": "Fetches a list of recent unread emails from the user's Gmail. Provides subject, sender, and snippet for each. Read-only access.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "maxResults": {
+          "type": "integer",
+          "description": "The maximum number of unread emails to fetch. Defaults to 5 if not specified."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "search_emails",
+    "description": "Searches emails in the user's Gmail based on a query, date range, or other criteria. Provides subject, sender, and snippet. Read-only access.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query. Examples: 'from:boss@example.com', 'subject:project update', 'after:2024/01/15 before:2024/01/20', 'is:important'."
+        },
+        "maxResults": {
+          "type": "integer",
+          "description": "The maximum number of emails to return. Defaults to 10."
+        }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "get_email_content",
+    "description": "Fetches the detailed content of a specific email using its message ID. Use this after 'get_unread_emails' or 'search_emails' if the user wants to read a specific email. Read-only access.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "type": "string",
+          "description": "The ID of the email message to fetch."
+        }
+      },
+      "required": ["messageId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "get_calendar_events",
+    "description": "Fetches events directly from the user's Google Calendar. Use this to find out what's on the user's schedule. You can specify a date range or search query. Assume the primary calendar unless the user specifies otherwise. Use get_current_datetime to resolve relative time ranges.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "calendarId": {
+          "type": "string",
+          "description": "Calendar identifier. Defaults to 'primary' if not specified."
+        },
+        "timeMin": {
+          "type": "string",
+          "description": "The start of the time range (ISO 8601 date-time string, e.g., '2025-06-03T00:00:00Z') for which to fetch events. If not provided, defaults to the current time for open-ended future searches."
+        },
+        "timeMax": {
+          "type": "string",
+          "description": "The end of the time range (ISO 8601 date-time string, e.g., '2025-06-03T23:59:59Z') for which to fetch events. If not provided, allows fetching events indefinitely into the future from timeMin."
+        },
+        "q": {
+          "type": "string",
+          "description": "Free text search query to find events (e.g., 'Dentist appointment', 'Birthday party')."
+        },
+        "maxResults": {
+          "type": "integer",
+          "description": "The maximum number of events to return. Defaults to 10 if not specified."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "create_calendar_event",
+    "description": "Creates a new event in the user's Google Calendar. Requires event summary, start, and end times. Confirm with the user before creating. Use get_current_datetime to resolve relative times. Use ISO 8601 with timezone; ask if missing.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "calendarId": {
+          "type": "string",
+          "description": "Calendar identifier. Defaults to 'primary' if not specified."
+        },
+        "summary": {
+          "type": "string",
+          "description": "The title or summary of the event (e.g., 'Meeting with John')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A more detailed description of the event (optional)."
+        },
+        "startDateTime": {
+          "type": "string",
+          "description": "The start date and time of the event in ISO 8601 format (e.g., '2025-06-03T14:00:00-07:00'). Include timezone offset if known."
+        },
+        "endDateTime": {
+          "type": "string",
+          "description": "The end date and time of the event in ISO 8601 format (e.g., '2025-06-03T15:00:00-07:00'). Include timezone offset if known."
+        },
+        "location": {
+          "type": "string",
+          "description": "The location of the event (optional, e.g., 'Conference Room A' or an address)."
+        },
+        "attendees": {
+          "type": "array",
+          "description": "A list of email addresses of attendees to invite (optional).",
+          "items": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "required": ["summary", "startDateTime", "endDateTime"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "update_calendar_event",
+    "description": "Updates an existing event in the user's Google Calendar. Requires the event ID and at least one field to update. Confirm with the user before updating. If multiple similar events exist, list them and ask which one to change. Use ISO 8601 with timezone; ask if missing.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "calendarId": {
+          "type": "string",
+          "description": "Calendar identifier. Defaults to 'primary' if not specified."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "The unique ID of the event to update."
+        },
+        "summary": {
+          "type": "string",
+          "description": "The new title or summary for the event (optional)."
+        },
+        "description": {
+          "type": "string",
+          "description": "The new detailed description for the event (optional)."
+        },
+        "startDateTime": {
+          "type": "string",
+          "description": "The new start date and time in ISO 8601 format (optional)."
+        },
+        "endDateTime": {
+          "type": "string",
+          "description": "The new end date and time in ISO 8601 format (optional)."
+        },
+        "location": {
+          "type": "string",
+          "description": "The new location for the event (optional)."
+        },
+        "attendees": {
+          "type": "array",
+          "description": "A new list of email addresses of attendees (optional). This will replace existing attendees.",
+          "items": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "required": ["eventId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "delete_calendar_event",
+    "description": "Deletes an event from the user's Google Calendar. Requires the event ID. Confirm with the user before deleting. If multiple similar events exist, list them and ask which one to remove.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "calendarId": {
+          "type": "string",
+          "description": "Calendar identifier. Defaults to 'primary' if not specified."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "The unique ID of the event to delete."
+        }
+      },
+      "required": ["eventId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "search_torrents",
+    "description": "Searches for torrents using Jackett. Use this tool when the user asks to find or download a specific movie, TV show, or file. Assume the user may prefer torrents over streaming when relevant.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The name of the movie, show, or content to search for."
+        }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "add_torrent_to_qb",
+    "description": "Adds a torrent to qBittorrent using a magnet link. Use this tool when the user selects or confirms a torrent to download.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "magnet": {
+          "type": "string",
+          "description": "The magnet link of the torrent to be added to the download queue."
+        }
+      },
+      "required": ["magnet"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "browser_context",
+    "description": "Use this function to get information about the current webpage in users browser. Use it when the user refers to their browser content.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "focus": {
+          "type": "string",
+          "enum": ["content", "selection", "links", "all"],
+          "description": "What to focus on: 'content' for page content, 'selection' for highlighted text, 'links' for page links, 'all' for everything. Default is 'all'.",
+          "default": "all"
+        },
+        "maxLength": {
+          "type": "integer",
+          "description": "Maximum character length for the response. Content will be prioritized and truncated to fit. Default is 4000.",
+          "default": 4000
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "perform_web_search",
+    "description": "Searches the web for information on a given query. Use this for current events, general knowledge questions, or topics not covered by other tools. Use this tool for browsing the web and when you don't know something or need additional context or data.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The specific search query or question to look up on the web."
+        }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "searxng_web_search",
+    "description": "Searches the web using a SearXNG instance for information on a given query. Use this when you want to use a privacy-focused, self-hosted search engine. Good for current events, general knowledge questions, or topics not covered by other tools.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The specific search query or question to look up on the web."
+        },
+        "categories": {
+          "type": "string",
+          "description": "Comma-separated search categories (e.g., 'general,web,videos'). Optional."
+        },
+        "engines": {
+          "type": "string",
+          "description": "Comma-separated specific search engines to use (e.g., 'google,bing'). Optional."
+        },
+        "language": {
+          "type": "string",
+          "description": "Language code for search results (e.g., 'en', 'es', 'fr'). Optional."
+        },
+        "time_range": {
+          "type": "string",
+          "enum": ["day", "month", "year"],
+          "description": "Time range filter for search results. Optional."
+        },
+        "safesearch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Safe search level: 0=off, 1=moderate, 2=strict. Optional."
+        }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "read_file",
+    "description": "Reads a UTF-8 text file after the user grants directory access for this session. Binary files are rejected and large files are truncated.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute path to the text file."
+        },
+        "maxChars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "description": "Maximum characters to return. Defaults to 50000."
+        }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "view_image",
+    "description": "Loads a local PNG, JPEG, or WebP image into the model's visual context after the user grants directory access for this session. Use this instead of read_file for images.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute path to the local image file."
+        }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "web_fetch",
+    "description": "Fetches readable text from a public HTTP or HTTPS URL. Local, private, link-local, metadata, credential-bearing, oversized, binary, and excessive redirect targets are blocked.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Public HTTP or HTTPS URL to fetch."
+        },
+        "maxChars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000,
+          "description": "Maximum extracted characters. Defaults to 20000."
+        }
+      },
+      "required": ["url"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "process",
+    "description": "Starts and manages a small number of background shell processes. Starting a process always requires explicit user approval. Use poll/output with the opaque processId to read incremental output, write for stdin, and stop to terminate the process tree.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["start", "list", "poll", "output", "write", "stop"]
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to start; required for start."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Optional approved working directory for start."
+        },
+        "processId": {
+          "type": "string",
+          "description": "Opaque ID returned by start; required for poll/output/write/stop."
+        },
+        "cursor": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Output cursor returned by the previous poll."
+        },
+        "input": {
+          "type": "string",
+          "description": "Text to write to process stdin."
+        }
+      },
+      "required": ["action"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "delegate_task",
+    "description": "Delegates a substantial read-only project analysis to a real background Codex worker. The project directory requires session approval. Returns a taskId immediately; use manage_delegated_task to check status or cancel.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Complete task brief for the delegated worker."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Absolute project directory the worker may inspect read-only."
+        },
+        "model": {
+          "type": "string",
+          "description": "Optional Codex model override."
+        },
+        "effort": {
+          "type": "string",
+          "description": "Optional supported reasoning effort."
+        }
+      },
+      "required": ["prompt", "cwd"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "manage_delegated_task",
+    "description": "Checks, retrieves the result of, or cancels a background task created by delegate_task.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "enum": ["status", "result", "cancel"] },
+        "taskId": {
+          "type": "string",
+          "description": "Opaque delegated task ID."
+        }
+      },
+      "required": ["action", "taskId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "write_text_file",
+    "description": "Writes UTF-8 text inside a user-approved directory. create refuses existing files, append adds text with size limits, and overwrite replaces atomically after a fresh user confirmation.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute destination file path."
+        },
+        "content": {
+          "type": "string",
+          "description": "UTF-8 text to write, limited to 512 KiB per call."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["create", "append", "overwrite"],
+          "description": "create refuses an existing file; append preserves existing content; overwrite requires confirmation and uses atomic replacement."
+        }
+      },
+      "required": ["path", "content", "mode"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "search_files",
+    "description": "Performs a bounded on-demand search inside a user-approved directory. Supports a filename glob and optional case-insensitive literal text query. Skips .git, node_modules, symlinks, large text files, and binary files.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Absolute root directory to search."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Optional glob such as **/*.ts or docs/*.md. Defaults to **/*."
+        },
+        "query": {
+          "type": "string",
+          "description": "Optional case-insensitive literal text to find in files up to 64 KiB."
+        }
+      },
+      "required": ["root"],
+      "additionalProperties": false
+    }
+  }
+]

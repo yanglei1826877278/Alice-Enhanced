@@ -1,0 +1,369 @@
+import OpenAI from 'openai'
+import Groq from 'groq-sdk'
+import { useSettingsStore } from '../stores/settingsStore'
+import { backendApi } from './backendApi'
+import {
+  API_ROUTE_OPENAI_BASE_URL,
+  DEEPSEEK_OPENAI_BASE_URL,
+  MINIMAX_OPENAI_BASE_URL,
+  ZAI_CODING_BASE_URL,
+} from './llmProviders/providerCatalog'
+
+let openaiClient: OpenAI | null = null
+let openrouterClient: OpenAI | null = null
+let groqClient: Groq | null = null
+let ollamaClient: OpenAI | null = null
+let lmStudioClient: OpenAI | null = null
+let zaiClient: OpenAI | null = null
+let minimaxClient: OpenAI | null = null
+let deepseekClient: OpenAI | null = null
+let customClient: OpenAI | null = null
+let apiRouteClient: OpenAI | null = null
+
+export function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    initializeOpenAIClient()
+  }
+  if (!openaiClient) {
+    throw new Error('OpenAI client could not be initialized')
+  }
+  return openaiClient
+}
+
+export function getOpenRouterClient(): OpenAI {
+  if (!openrouterClient) {
+    initializeOpenRouterClient()
+  }
+  if (!openrouterClient) {
+    throw new Error('OpenRouter client could not be initialized')
+  }
+  return openrouterClient
+}
+
+export function getGroqClient(): Groq {
+  if (!groqClient) {
+    initializeGroqClient()
+  }
+  if (!groqClient) {
+    throw new Error('Groq client could not be initialized')
+  }
+  return groqClient
+}
+
+export function getOllamaClient(): OpenAI {
+  if (!ollamaClient) {
+    initializeOllamaClient()
+  }
+  if (!ollamaClient) {
+    throw new Error('Ollama client could not be initialized')
+  }
+  return ollamaClient
+}
+
+export function getLMStudioClient(): OpenAI {
+  if (!lmStudioClient) {
+    initializeLMStudioClient()
+  }
+  if (!lmStudioClient) {
+    throw new Error('LM Studio client could not be initialized')
+  }
+  return lmStudioClient
+}
+
+export function getZAIClient(): OpenAI {
+  if (!zaiClient) {
+    initializeZAIClient()
+  }
+  if (!zaiClient) {
+    throw new Error('Z.ai client could not be initialized')
+  }
+  return zaiClient
+}
+
+export function getMiniMaxClient(): OpenAI {
+  if (!minimaxClient) {
+    initializeMiniMaxClient()
+  }
+  if (!minimaxClient) {
+    throw new Error('MiniMax client could not be initialized')
+  }
+  return minimaxClient
+}
+
+export function getDeepSeekClient(): OpenAI {
+  if (!deepseekClient) {
+    initializeDeepSeekClient()
+  }
+  if (!deepseekClient) {
+    throw new Error('DeepSeek client could not be initialized')
+  }
+  return deepseekClient
+}
+
+export function getCustomClient(): OpenAI {
+  const settings = useSettingsStore().config
+  if (!customClient) {
+    customClient = new OpenAI({
+      apiKey: settings.VITE_CUSTOM_API_KEY.trim(),
+      baseURL: settings.customBaseUrl.trim().replace(/\/+$/, ''),
+      dangerouslyAllowBrowser: true,
+      timeout: 120 * 1000,
+      maxRetries: 1,
+    })
+  }
+  return customClient
+}
+
+export function getAPIRouteClient(): OpenAI {
+  if (!apiRouteClient) {
+    initializeAPIRouteClient()
+  }
+  if (!apiRouteClient) {
+    throw new Error('API Route client could not be initialized')
+  }
+  return apiRouteClient
+}
+
+function initializeOpenAIClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.VITE_OPENAI_API_KEY) {
+    console.error('OpenAI API Key is not configured.')
+    throw new Error('OpenAI API Key is not configured.')
+  }
+
+  openaiClient = new OpenAI({
+    apiKey: settings.VITE_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+function initializeOpenRouterClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.VITE_OPENROUTER_API_KEY) {
+    console.error('OpenRouter API Key is not configured.')
+    throw new Error('OpenRouter API Key is not configured.')
+  }
+
+  openrouterClient = new OpenAI({
+    apiKey: settings.VITE_OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+function initializeGroqClient(): void {
+  const settingsStore = useSettingsStore()
+  const settings = settingsStore.config
+
+  if (settingsStore.isProduction && !settings.VITE_GROQ_API_KEY) {
+    console.error('Groq API Key is not configured in production.')
+    throw new Error('Groq API Key is not configured in production.')
+  }
+  if (!settings.VITE_GROQ_API_KEY) {
+    console.warn('Groq API Key is not set. STT functionality will fail.')
+  }
+
+  groqClient = new Groq({
+    apiKey: settings.VITE_GROQ_API_KEY,
+    dangerouslyAllowBrowser: true,
+  })
+}
+
+function initializeOllamaClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.ollamaBaseUrl) {
+    console.error('Ollama Base URL is not configured.')
+    throw new Error('Ollama Base URL is not configured.')
+  }
+
+  ollamaClient = new OpenAI({
+    apiKey: 'ollama',
+    baseURL: `${settings.ollamaBaseUrl}/v1`,
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+function initializeLMStudioClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.lmStudioBaseUrl) {
+    console.error('LM Studio Base URL is not configured.')
+    throw new Error('LM Studio Base URL is not configured.')
+  }
+
+  lmStudioClient = new OpenAI({
+    apiKey: 'lm-studio',
+    baseURL: `${settings.lmStudioBaseUrl}/v1`,
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+function initializeZAIClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.VITE_ZAI_API_KEY) {
+    console.error('Z.ai API Key is not configured.')
+    throw new Error('Z.ai API Key is not configured.')
+  }
+
+  zaiClient = new OpenAI({
+    apiKey: settings.VITE_ZAI_API_KEY,
+    baseURL: settings.zaiBaseUrl || ZAI_CODING_BASE_URL,
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+function initializeMiniMaxClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.VITE_MINIMAX_API_KEY) {
+    console.error('MiniMax API Key is not configured.')
+    throw new Error('MiniMax API Key is not configured.')
+  }
+
+  minimaxClient = new OpenAI({
+    apiKey: settings.VITE_MINIMAX_API_KEY,
+    baseURL: settings.minimaxBaseUrl || MINIMAX_OPENAI_BASE_URL,
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+function initializeDeepSeekClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.VITE_DEEPSEEK_API_KEY) {
+    console.error('DeepSeek API Key is not configured.')
+    throw new Error('DeepSeek API Key is not configured.')
+  }
+
+  deepseekClient = new OpenAI({
+    apiKey: settings.VITE_DEEPSEEK_API_KEY,
+    baseURL: settings.deepseekBaseUrl || DEEPSEEK_OPENAI_BASE_URL,
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+function initializeAPIRouteClient(): void {
+  const settings = useSettingsStore().config
+  if (!settings.VITE_API_ROUTE_API_KEY) {
+    throw new Error('API Route API Key is not configured.')
+  }
+
+  apiRouteClient = new OpenAI({
+    apiKey: settings.VITE_API_ROUTE_API_KEY,
+    baseURL: API_ROUTE_OPENAI_BASE_URL,
+    dangerouslyAllowBrowser: true,
+    timeout: 20 * 1000,
+    maxRetries: 1,
+  })
+}
+
+export function reinitializeClients(): void {
+  const settings = useSettingsStore().config
+  customClient = null
+  console.log('Reinitializing API clients with updated settings...')
+
+  openaiClient = null
+  if (settings.VITE_OPENAI_API_KEY)
+    try {
+      initializeOpenAIClient()
+      console.log('OpenAI client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize OpenAI client:', error)
+    }
+
+  openrouterClient = null
+  if (settings.VITE_OPENROUTER_API_KEY)
+    try {
+      initializeOpenRouterClient()
+      console.log('OpenRouter client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize OpenRouter client:', error)
+    }
+
+  groqClient = null
+  if (settings.VITE_GROQ_API_KEY)
+    try {
+      initializeGroqClient()
+      console.log('Groq client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize Groq client:', error)
+    }
+
+  ollamaClient = null
+  if (settings.aiProvider === 'ollama')
+    try {
+      initializeOllamaClient()
+      console.log('Ollama client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize Ollama client:', error)
+    }
+
+  lmStudioClient = null
+  if (settings.aiProvider === 'lm-studio')
+    try {
+      initializeLMStudioClient()
+      console.log('LM Studio client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize LM Studio client:', error)
+    }
+
+  zaiClient = null
+  if (settings.VITE_ZAI_API_KEY)
+    try {
+      initializeZAIClient()
+      console.log('Z.ai client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize Z.ai client:', error)
+    }
+
+  minimaxClient = null
+  if (settings.VITE_MINIMAX_API_KEY)
+    try {
+      initializeMiniMaxClient()
+      console.log('MiniMax client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize MiniMax client:', error)
+    }
+
+  deepseekClient = null
+  if (settings.VITE_DEEPSEEK_API_KEY)
+    try {
+      initializeDeepSeekClient()
+      console.log('DeepSeek client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize DeepSeek client:', error)
+    }
+
+  apiRouteClient = null
+  if (settings.VITE_API_ROUTE_API_KEY)
+    try {
+      initializeAPIRouteClient()
+      console.log('API Route client reinitialized successfully')
+    } catch (error) {
+      console.error('Failed to reinitialize API Route client:', error)
+    }
+}
+
+export async function initializeClients(): Promise<void> {
+  console.log('Initializing API clients...')
+  reinitializeClients()
+
+  // Initialize backend API and wait for it
+  try {
+    await backendApi.initialize()
+    console.log('Backend API initialized successfully')
+  } catch (error) {
+    console.error('Failed to initialize Backend API:', error)
+  }
+}

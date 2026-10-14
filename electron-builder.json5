@@ -1,0 +1,65 @@
+// @see https://www.electron.build/configuration/configuration
+{
+  $schema: 'https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json',
+  appId: 'aliceaiapp',
+  asar: true,
+  productName: 'Alice AI App',
+  electronDist: 'node_modules/electron/dist',
+  directories: {
+    output: 'release/${version}',
+  },
+  publish: [
+    {
+      provider: 'github',
+      owner: 'yanglei1826877278',
+      repo: 'Alice-Enhanced',
+      releaseType: 'release',
+    },
+  ],
+  files: ['dist', 'dist-electron', '!**/*.map'],
+  extraResources: [
+    {
+      from: './app-config.json',
+      to: 'app-config.json',
+    },
+    {
+      from: 'resources/backend',
+      to: 'backend',
+      filter: ['alice-backend', 'alice-backend.exe'],
+    },
+  ],
+  mac: {
+    target: ['dmg'],
+    icon: 'public/app_logo.png',
+    entitlements: 'build/entitlements.mac.plist',
+    entitlementsInherit: 'build/entitlements.mac.plist',
+    extendInfo: {
+      NSMicrophoneUsageDescription: 'Alice uses the microphone for voice activity detection and speech recognition.',
+    },
+    artifactName: 'Alice-AI-App-Mac-${version}-Installer.${ext}',
+  },
+  win: {
+    icon: 'public/icon.ico',
+    target: [
+      {
+        target: 'nsis',
+        arch: ['x64'],
+      },
+    ],
+    artifactName: 'Alice-AI-App-Windows-${version}-Setup.${ext}',
+  },
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+    runAfterFinish: false,
+    deleteAppDataOnUninstall: false,
+  },
+  compression: 'maximum',
+  linux: {
+    target: ['AppImage'],
+    category: 'Utility',
+    icon: 'public/app_logo.png',
+    artifactName: 'Alice-AI-App-Linux-${version}.${ext}',
+  },
+}

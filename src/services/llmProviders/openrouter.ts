@@ -1,0 +1,230 @@
+import type OpenAI from 'openai'
+import { useSettingsStore } from '../../stores/settingsStore'
+import { getOpenRouterClient } from '../apiClients'
+import { listModelsViaMainProcess } from './modelDiscovery'
+import { convertOpenRouterStreamToResponsesFormat } from './streamAdapters'
+import { buildToolsForProvider } from './tools'
+import { logFullLlmRequest } from './requestDebug'
+
+export async function listOpenRouterModelsForConfig(
+  apiKey: string
+): Promise<OpenAI.Models.Model[]> {
+  const models = await listModelsViaMainProcess({
+    apiKey,
+    baseURL: 'https://openrouter.ai/api/v1',
+    providerName: 'OpenRouter',
+  })
+
+  return filterOpenRouterModels(models)
+}
+
+function filterOpenRouterModels(
+  models: OpenAI.Models.Model[]
+): OpenAI.Models.Model[] {
+  return models
+    .filter(model => {
+      const id = model.id
+      const isExcluded =
+        id.includes('instruct') ||
+        id.includes('code') ||
+        id.includes('completion') ||
+        id.includes('embed') ||
+        id.includes('moderate') ||
+        id.includes('whisper') ||
+        id.includes('tts') ||
+        id.includes('dall-e') ||
+        id.includes('moderation')
+
+      return !isExcluded
+    })
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+export const listOpenRouterModels = async (): Promise<
+  OpenAI.Models.Model[]
+> => {
+  const settings = useSettingsStore().config
+  return listOpenRouterModelsForConfig(settings.VITE_OPENROUTER_API_KEY || '')
+}
+
+export const createOpenRouterResponse = async (
+  input: OpenAI.Responses.Request.InputItemLike[],
+  _previousResponseId: string | null,
+  stream: boolean = false,
+  customInstructions?: string,
+  signal?: AbortSignal
+): Promise<any> => {
+  const client = getOpenRouterClient()
+  const settings = useSettingsStore().config
+  const finalToolsForApi = await buildToolsForProvider()
+
+  const messages = input
+    .map((item: any) => {
+      if (item.role === 'user') {
+        if (Array.isArray(item.content)) {
+          const textParts = item.content
+            .filter(
+              (part: any) => part.type === 'input_text' && part.text?.trim()
+            )
+            .map((part: any) => part.text)
+            .join(' ')
+
+          return {
+            role: 'user',
+            content: textParts || 'Hello',
+          }
+        } else if (typeof item.content === 'string' && item.content.trim()) {
+          return {
+            role: 'user',
+            content: item.content,
+          }
+        } else {
+          return {
+            role: 'user',
+            content: 'Hello',
+          }
+        }
+      } else if (item.role === 'assistant') {
+        const textContent = Array.isArray(item.content)
+          ? item.content
+              .filter(
+                (part: any) => part.type === 'output_text' && part.text?.trim()
+              )
+              .map((part: any) => part.text)
+              .join(' ')
+          : typeof item.content === 'string' && item.content.trim()
+            ? item.content
+            : null
+
+        const toolCalls = item.tool_calls || null
+
+        const openRouterToolCalls = toolCalls
+          ? toolCalls.map((toolCall: any) => ({
+              id: toolCall.call_id || toolCall.id,
+              type: 'function',
+              function: {
+                name: toolCall.name,
+                arguments:
+                  typeof toolCall.arguments === 'string'
+                    ? toolCall.arguments
+                    : JSON.stringify(toolCall.arguments || {}),
+              },
+            }))
+          : null
+
+        return {
+          role: 'assistant',
+          content: textContent,
+          tool_calls: openRouterToolCalls,
+        }
+      } else if (item.role === 'system') {
+        const content =
+          typeof item.content === 'string'
+            ? item.content
+            : Array.isArray(item.content)
+              ? item.content.map((p: any) => p.text || '').join(' ')
+              : 'You are a helpful assistant.'
+
+        return {
+          role: 'system',
+          content: content.trim() || 'You are a helpful assistant.',
+        }
+      } else if (item.type === 'function_call_output') {
+        return {
+          role: 'tool',
+          tool_call_id: item.call_id,
+          content:
+            typeof item.output === 'string'
+              ? item.output
+              : JSON.stringify(item.output),
+        }
+      }
+
+      return {
+        ...item,
+        content:
+          typeof item.content === 'string' && item.content.trim()
+            ? item.content
+            : 'Message received.',
+      }
+    })
+    .filter(msg => msg.content.trim())
+
+  if (customInstructions) {
+    const openrouterSystemPrompt =
+      customInstructions +
+      '\n\nIMPORTANT: Use the OpenRouter web search tool when you need current information. Do NOT use open_path or other tools for web searches.'
+
+    const systemIndex = messages.findIndex(msg => msg.role === 'system')
+    if (systemIndex === -1) {
+      messages.unshift({
+        role: 'system',
+        content: openrouterSystemPrompt,
+      })
+    } else {
+      const existing = messages[systemIndex]?.content?.trim() || ''
+      const hasCustom =
+        customInstructions.trim() &&
+        existing.includes(customInstructions.trim())
+      const hasNote = existing.includes(
+        'IMPORTANT: Use the OpenRouter web search tool when you need current information.'
+      )
+      let merged = existing
+      if (!hasCustom) {
+        merged = merged
+          ? `${customInstructions}\n\n${merged}`
+          : customInstructions
+      }
+      if (!hasNote) {
+        merged = `${merged}\n\nIMPORTANT: Use the OpenRouter web search tool when you need current information. Do NOT use open_path or other tools for web searches.`
+      }
+      messages[systemIndex].content = merged.trim()
+    }
+  }
+
+  const params: OpenAI.Chat.ChatCompletionCreateParams & {
+    max_tool_calls?: number
+  } = {
+    model: settings.assistantModel || 'gpt-4.1-mini',
+    messages: messages,
+    ...(!settings.assistantModel.startsWith('gpt-5')
+      ? {
+          temperature: settings.assistantTemperature,
+          top_p: settings.assistantTopP,
+        }
+      : {}),
+    tools:
+      finalToolsForApi.length > 0
+        ? finalToolsForApi.map(tool => {
+            if (tool.type === 'function') {
+              return {
+                type: 'function',
+                function: {
+                  name: tool.name,
+                  description: tool.description,
+                  parameters: tool.parameters,
+                },
+              }
+            }
+            return tool
+          })
+        : undefined,
+    // OpenRouter server tools can otherwise take up to 30 tool steps per request.
+    max_tool_calls: 1,
+    stream: stream,
+  }
+
+  logFullLlmRequest('openrouter', 'chat.completions.create', params)
+
+  if (stream) {
+    const openrouterStream = await client.chat.completions.create(
+      params as any,
+      {
+        signal,
+      }
+    )
+    return convertOpenRouterStreamToResponsesFormat(openrouterStream)
+  }
+
+  return client.chat.completions.create(params as any, { signal })
+}

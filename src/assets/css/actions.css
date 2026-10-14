@@ -1,0 +1,129 @@
+.indicator {
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  @apply p-2 rounded-full touch-auto w-14 select-none;
+}
+.indicator:hover {
+  @apply bg-white/10;
+}
+.indicator.mini {
+  @apply w-4 h-4 p-0;
+}
+.indicator.indicator-side {
+  @apply rounded-none p-0;
+}
+.indicator.indicator-side:hover {
+  @apply bg-primary/0;
+}
+
+.avatar-action-bar {
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.action-icon-button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.action-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.action-icon-button:focus-visible {
+  outline: 2px solid rgb(96 165 250);
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+
+.btn-indicator-side {
+  transition: all 0.3s ease-in-out;
+  @apply bg-black/20 outline-none;
+}
+.btn-indicator-side:hover {
+  @apply bg-black/60;
+}
+.btn-indicator-side:hover.close {
+  @apply bg-red-500;
+}
+
+.application-menu .application-menu-content {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0;
+}
+
+.inside-actions {
+  @apply opacity-0;
+  transition: all 0.3s ease-in-out;
+}
+
+.dragable {
+  -webkit-user-select: none;
+  -webkit-app-region: drag;
+}
+
+.window-drag-area {
+  -webkit-app-region: drag;
+}
+
+.window-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.status-message-container {
+  width: 50%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.status-message-text {
+  display: inline-block;
+  white-space: nowrap;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.status-message-container .status-message-text.scrolling-text {
+  animation-name: scrollLeftAnimation;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+  position: absolute;
+  left: 50%;
+}
+
+@keyframes scrollLeftAnimation {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.status-message-container .status-message-text:not(.scrolling-text) {
+  position: relative;
+  left: auto;
+  transform: none;
+  animation: none !important;
+  display: inline;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 100%;
+}
