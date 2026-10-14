@@ -202,6 +202,7 @@ const handleAvatarVideoError = (event: Event) => {
   console.warn(
     'Avatar video failed to load:',
     video.error?.code,
+    video.error?.message,
     video.currentSrc
   )
   generalStore.statusMessage =

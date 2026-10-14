@@ -1,0 +1,136 @@
+name: Publish Windows Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - .github/workflows/publish-windows.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-windows-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'yanglei1826877278/Alice-Enhanced'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+          cache-dependency-path: backend/go.sum
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Configure Windows build tools
+        shell: pwsh
+        run: |
+          "C:\msys64\ucrt64\bin" >> $env:GITHUB_PATH
+          python -m pip install --upgrade setuptools wheel
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
+          npm_config_python: ${{ steps.python.outputs.python-path }}
+
+      - name: Prepare public build configuration
+        shell: pwsh
+        run: |
+          @{ VITE_GOOGLE_CLIENT_ID = ''; VITE_GOOGLE_CLIENT_SECRET = '' } |
+            ConvertTo-Json | Set-Content -LiteralPath app-config.json -Encoding utf8NoBOM
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          npm run build:go
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build:web
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build:electron -- --win --x64 --publish never
+          exit $LASTEXITCODE
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
+          npm_config_python: ${{ steps.python.outputs.python-path }}
+
+      - name: Publish installer and update metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs')
+            const path = require('node:path')
+            const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version
+            const tag = `v${version}`
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const directory = path.join('release', version)
+            const names = [
+              `Alice-AI-App-Windows-${version}-Setup.exe`,
+              `Alice-AI-App-Windows-${version}-Setup.exe.blockmap`,
+              'latest.yml',
+            ]
+            for (const name of names) {
+              if (!fs.existsSync(path.join(directory, name))) {
+                throw new Error(`Missing release asset: ${name}`)
+              }
+            }
+            let release
+            try {
+              release = (await github.rest.repos.getReleaseByTag({ owner, repo, tag })).data
+              if (!release.draft) throw new Error(`Release ${tag} is already published`)
+            } catch (error) {
+              if (error.status !== 404) throw error
+            }
+            if (!release) {
+              release = (await github.rest.repos.createRelease({
+                owner, repo, tag_name: tag, target_commitish: context.sha,
+                name: `Alice Enhanced ${version}`, draft: true, prerelease: false,
+                body: [
+                  'Windows x64 安装包。',
+                  '',
+                  '- 修复角色 MP4 加载协议，支持读取位于文件尾部的视频索引。',
+                  '- 视频加载失败时记录具体错误信息。',
+                  '- 包含会话输入焦点、图片粘贴和关闭语音输出后的合成请求修复。',
+                  '',
+                  '发布包不包含个人角色视频、头像、配置或数据库。',
+                  '本次仅构建打包，未运行自动化测试。',
+                ].join('\n'),
+              })).data
+            }
+            for (const name of names) {
+              const existing = release.assets.find(asset => asset.name === name)
+              if (existing) {
+                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id })
+              }
+              await github.rest.repos.uploadReleaseAsset({
+                owner, repo, release_id: release.id, name,
+                data: fs.readFileSync(path.join(directory, name)),
+                headers: { 'content-type': name.endsWith('.yml') ? 'text/yaml' : 'application/octet-stream' },
+              })
+            }
+            const published = (await github.rest.repos.updateRelease({
+              owner, repo, release_id: release.id, draft: false, make_latest: 'true',
+            })).data
+            core.notice(`Published ${published.html_url}`)

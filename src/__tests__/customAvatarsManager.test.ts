@@ -105,13 +105,10 @@ describe('customAvatarsManager', () => {
     const pngHeader = new Uint8Array([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ])
-    const snapshot = await setAvatarChatImage(
-      'custom:GalaxyAlice',
-      pngHeader
-    )
+    const snapshot = await setAvatarChatImage('custom:GalaxyAlice', pngHeader)
 
     expect(snapshot.avatars[0].chatAvatar).toContain(
-      'GalaxyAlice%2Fchat-avatar.png'
+      'alice-avatar://local/GalaxyAlice/chat-avatar.png'
     )
     await expect(
       setAvatarChatImage('custom:../escape', pngHeader)

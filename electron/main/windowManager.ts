@@ -1,5 +1,5 @@
-import { BrowserWindow, screen, shell, protocol } from 'electron'
-import { fileURLToPath } from 'node:url'
+import { BrowserWindow, screen, shell, protocol, net } from 'electron'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import {
   resolvePathWithinRoot,
@@ -363,22 +363,40 @@ export function registerCustomProtocol(
   })
 
   if (customAvatarsPath) {
-    protocol.registerFileProtocol('alice-avatar', (request, callback) => {
+    protocol.handle('alice-avatar', async request => {
       try {
-        const url = request.url
-          .substring('alice-avatar://'.length)
-          .split(/[?#]/, 1)[0]
-        const decodedUrlPath = decodeURIComponent(url)
+        const url = new URL(request.url)
+        if (
+          url.hostname !== 'local' ||
+          url.username ||
+          url.password ||
+          url.port
+        ) {
+          throw new Error('Invalid avatar protocol host')
+        }
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+          return new Response(null, { status: 405 })
+        }
+        const decodedUrlPath = decodeURIComponent(url.pathname).replace(
+          /^\/+/,
+          ''
+        )
         const filePath = resolvePathWithinRoot(
           customAvatarsPath,
           decodedUrlPath
         )
-        callback({ path: filePath })
-      } catch {
+        // Forward Range headers so Chromium can read tail metadata and seek
+        // without loading the entire video into a JavaScript buffer.
+        return await net.fetch(pathToFileURL(filePath).href, {
+          method: request.method,
+          headers: request.headers,
+        })
+      } catch (error) {
         console.error(
-          `[Protocol] Denied access to unsafe avatar path from URL: ${request.url}`
+          `[Protocol] Could not load avatar resource: ${request.url}`,
+          error
         )
-        callback({ error: -6 })
+        return new Response(null, { status: 404 })
       }
     })
   }

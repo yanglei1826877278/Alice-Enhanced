@@ -50,8 +50,8 @@ function createAvatarId(folderName: string): string {
 }
 
 function createAvatarProtocolUrl(folderName: string, fileName: string): string {
-  const relativePath = path.join(folderName, fileName).replace(/\\/g, '/')
-  return `${AVATAR_PROTOCOL}${encodeURIComponent(relativePath)}`
+  // Keep a fixed ASCII host; folder/file names belong in encoded path segments.
+  return `${AVATAR_PROTOCOL}local/${encodeURIComponent(folderName)}/${encodeURIComponent(fileName)}`
 }
 
 async function findChatAvatar(

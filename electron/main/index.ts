@@ -4,11 +4,25 @@ process.env.ELECTRON_DISABLE_GPU = '1'
 process.env.LIBGL_ALWAYS_SOFTWARE = '1'
 process.env.GALLIUM_DRIVER = 'llvmpipe'
 
-import { app, session, BrowserWindow } from 'electron'
+import { app, session, BrowserWindow, protocol } from 'electron'
 import { getDataRoot } from './storagePaths'
 import { initializeLogging } from './logging'
 
 app.disableHardwareAcceleration()
+
+// Standard URLs let Chromium seek to MP4 metadata stored at the end of a file.
+// Scheme privileges must be registered before Electron emits app.ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'alice-avatar',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+    },
+  },
+])
 
 import {
   initializeThoughtVectorStore,

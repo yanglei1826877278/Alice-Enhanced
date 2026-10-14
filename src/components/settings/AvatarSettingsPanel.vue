@@ -34,9 +34,7 @@
             playsinline
             draggable="false"
             @loadedmetadata="updateAspect"
-            @error="
-              videoError = '视频无法播放，请检查 MP4 编码和文件是否完整。'
-            "
+            @error="handleVideoError"
           />
           <div class="avatar-crop-guides" aria-hidden="true">
             <span></span><span></span>
@@ -101,9 +99,7 @@
               :disabled="avatars.isUpdatingChatAvatar"
               @click="chatAvatarInput?.click()"
             >
-              {{
-                avatars.isUpdatingChatAvatar ? '正在更新…' : '更换聊天头像'
-              }}
+              {{ avatars.isUpdatingChatAvatar ? '正在更新…' : '更换聊天头像' }}
             </button>
           </div>
         </div>
@@ -149,8 +145,7 @@
         <span class="avatar-choice-monogram"
           ><img
             :src="avatar.chatAvatar || avatars.defaultAssistantChatAvatar"
-            alt=""
-        /></span
+            alt="" /></span
         ><span class="avatar-choice-text"
           ><strong>{{ avatar.name }}</strong
           ><small>{{
@@ -193,8 +188,7 @@ const selectedAvatar = computed(
     ) || avatars.builtInAvatar
 )
 const selectedChatAvatar = computed(
-  () =>
-    selectedAvatar.value.chatAvatar || avatars.defaultAssistantChatAvatar
+  () => selectedAvatar.value.chatAvatar || avatars.defaultAssistantChatAvatar
 )
 const previewStates = [
   { id: 'standby', label: '待机' },
@@ -235,6 +229,24 @@ function updateAspect(event: Event) {
   aspect.value = video.videoWidth / video.videoHeight || 1
   videoError.value = ''
 }
+
+function handleVideoError(event: Event) {
+  const video = event.target as HTMLVideoElement
+  const code = video.error?.code
+  const reasons: Record<number, string> = {
+    1: '视频加载已中断，请重新选择角色。',
+    2: '视频文件读取失败，请检查文件是否存在且可访问。',
+    3: '视频解码失败，请检查编码兼容性或文件完整性。',
+    4: '视频来源或格式无法加载，请刷新角色列表；若仍失败，请查看日志。',
+  }
+  videoError.value = code ? reasons[code] || '视频无法播放。' : '视频无法播放。'
+  console.warn('[AvatarPreview] Video failed to load:', {
+    code,
+    message: video.error?.message,
+    source: video.currentSrc || video.src,
+  })
+}
+
 function updateFraming(frame: AvatarFraming) {
   emit(
     'update:setting',
