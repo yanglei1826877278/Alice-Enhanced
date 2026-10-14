@@ -39,6 +39,7 @@ jobs:
           cache-dependency-path: backend/go.sum
 
       - uses: msys2/setup-msys2@v2
+        id: msys2
         with:
           msystem: UCRT64
           update: true
@@ -47,7 +48,9 @@ jobs:
       - name: Configure Windows build tools
         shell: pwsh
         run: |
-          "C:\msys64\ucrt64\bin" >> $env:GITHUB_PATH
+          $gccBin = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'ucrt64\bin'
+          $gccBin >> $env:GITHUB_PATH
+          "CC=$(Join-Path $gccBin 'gcc.exe')" >> $env:GITHUB_ENV
           python -m pip install --upgrade setuptools wheel
 
       - name: Install dependencies
@@ -65,12 +68,20 @@ jobs:
       - name: Build Windows installer
         shell: pwsh
         run: |
-          npm run build:go
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run build:web
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run build:electron -- --win --x64 --publish never
-          exit $LASTEXITCODE
+          function Invoke-ReleaseBuild {
+            param([string]$ScriptName, [string[]]$BuildArgs = @())
+            & npm run $ScriptName -- @BuildArgs 2>&1 | Tee-Object -Variable buildOutput
+            $buildExitCode = $LASTEXITCODE
+            if ($buildExitCode -ne 0) {
+              $tail = ($buildOutput | Select-Object -Last 60) -join "`n"
+              $tail = $tail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+              Write-Output "::error title=$ScriptName failed::$tail"
+              exit $buildExitCode
+            }
+          }
+          Invoke-ReleaseBuild 'build:go'
+          Invoke-ReleaseBuild 'build:web'
+          Invoke-ReleaseBuild 'build:electron' @('--win', '--x64', '--publish', 'never')
         env:
           PYTHON: ${{ steps.python.outputs.python-path }}
           npm_config_python: ${{ steps.python.outputs.python-path }}

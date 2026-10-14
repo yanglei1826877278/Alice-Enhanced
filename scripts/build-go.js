@@ -1093,10 +1093,11 @@ async function buildGoBackend() {
 
   if (isWindows) {
     const gccCandidates = [
+      process.env.CC,
       'C:\\msys64\\ucrt64\\bin\\gcc.exe',
       'C:\\msys64\\mingw64\\bin\\gcc.exe',
     ]
-    const gccPath = gccCandidates.find(candidate => fs.existsSync(candidate))
+    const gccPath = gccCandidates.find(candidate => candidate && fs.existsSync(candidate))
 
     if (gccPath) {
       const gccBinDir = path.dirname(gccPath)
