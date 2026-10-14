@@ -20,9 +20,15 @@ const electronBuilderCli = path.join(
 
 fs.mkdirSync(cacheDir, { recursive: true })
 
+const builderArgs = [...process.argv.slice(2)]
+const localElectronDist = path.join(projectRoot, 'node_modules', 'electron', 'dist')
+if (fs.existsSync(localElectronDist)) {
+  builderArgs.push(`--config.electronDist=${localElectronDist}`)
+}
+
 const result = spawnSync(
   process.execPath,
-  [electronBuilderCli, ...process.argv.slice(2)],
+  [electronBuilderCli, ...builderArgs],
   {
     cwd: projectRoot,
     env: {

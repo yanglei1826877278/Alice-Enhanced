@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - package.json
+      - electron-builder.json5
+      - scripts/build-electron.js
       - .github/workflows/publish-windows.yml
   workflow_dispatch:
 

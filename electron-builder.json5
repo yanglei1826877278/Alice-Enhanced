@@ -4,7 +4,6 @@
   appId: 'aliceaiapp',
   asar: true,
   productName: 'Alice AI App',
-  electronDist: 'node_modules/electron/dist',
   directories: {
     output: 'release/${version}',
   },
